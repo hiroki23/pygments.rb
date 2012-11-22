@@ -24,7 +24,7 @@ from pygments.lexers.compiled import ScalaLexer
 
 __all__ = ['HtmlLexer', 'XmlLexer', 'JavascriptLexer', 'JSONLexer', 'CssLexer',
            'PhpLexer', 'ActionScriptLexer', 'XsltLexer', 'ActionScript3Lexer',
-           'MxmlLexer', 'HaxeLexer', 'HamlLexer', 'SassLexer', 'ScssLexer',
+           'MxmlLexer', 'HaxeLexer', 'HamlLexer', 'SlimLexer', 'SassLexer', 'ScssLexer',
            'ObjectiveJLexer', 'CoffeeScriptLexer', 'DuelLexer', 'ScamlLexer',
            'JadeLexer', 'XQueryLexer', 'DtdLexer', 'DartLexer']
 
@@ -1650,6 +1650,118 @@ common_sass_tokens = {
         include('value'),
     ],
 }
+
+
+class SlimLexer(ExtendedRegexLexer):
+    """
+    For Slim markup.
+    """
+    name = 'Slim'
+    aliases = ['slim', 'SLIM']
+    filenames = ['*.slim']
+    mimetypes = ['text/x-slim']
+
+    flags = re.IGNORECASE
+    # Slim can include " \" anywhere,
+    # which is ignored and used to wrap long lines.
+    # To accomodate this, use this custom faux dot instead.
+    _dot = r'(?: \\\n(?=.* \\)|.)'
+
+    # In certain places, a comma at the end of the line
+    # allows line wrapping as well.
+    _comma_dot = r'(?:,\s*\n|' + _dot + ')'
+
+    html_tag = r'(a|abbr|acronym|address|applet|area|article|aside|audio|b|base|basefont|bdi|bdo|big|blockquote|body|br|button|canvas|caption|center|cite|code|col|colgroup|command|datalist|dd|del|details|dfn|dir|div|dl|dt|em|embed|fieldset|figcaption|figure|font|footer|form|frame|frameset|head|header|hgroup|h1|h2|h3|h4|h5|h6|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|map|mark|menu|meta|meter|nav|noframes|noscript|object|ol|optgroup|option|output|p|param|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strike|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|tt|u|ul|var|video|wbr)'
+
+    tokens = {
+        'root': [
+            (r'[ \t]*\n', Text),
+            (r'[ \t]*', _indentation),
+        ],
+
+        'css': [
+            (r'\.[a-z0-9_:-]+', Name.Class, 'tag'),
+            (r'\#[a-z0-9_:-]+', Name.Function, 'tag'),
+        ],
+
+        'eval-or-plain': [
+            (r'=?=', Punctuation, 'plain'),
+            (r'(=?[=~])(' + _comma_dot + r'*\n)',
+             bygroups(Punctuation, using(RubyLexer)),
+             'root'),
+            (r'', Text, 'plain'),
+        ],
+
+        'content': [
+            include('css'),
+            (html_tag + r'(?=\s|\n|\.|\#|:)', Name.Tag, 'tag'),
+            (r'doctype', Name.Namespace, '#pop'),
+            (r'(/)(\[' + _dot + '*?\])(' + _dot + r'*\n)',
+             bygroups(Comment, Comment.Special, Comment),
+             '#pop'),
+            (r'/!' + _dot + r'*\n', _starts_block(Comment, 'html-comment-block'),
+             '#pop'),
+            (r'/' + _dot + r'*\n', _starts_block(Comment.Preproc,
+                                                 'slim-comment-block'), '#pop'),
+            (r'(-)(' + _comma_dot + r'*\n)',
+             bygroups(Punctuation, using(RubyLexer)),
+             '#pop'),
+#            (r':' + _dot + r'*\n', _starts_block(Name.Decorator, 'filter-block'),
+#             '#pop'),
+            include('eval-or-plain'),
+        ],
+
+        'tag': [
+            include('css'),
+            (r'\{(,\n|' + _dot + ')*?\}', using(RubyLexer)),
+            (r'\[' + _dot + '*?\]', using(RubyLexer)),
+#            (r'\(', Text, 'html-attributes'),
+            (r'/[ \t]*\n', Punctuation, '#pop:2'),
+            (r'[<>]{1,2}(?=[ \t=])', Punctuation),
+            include('eval-or-plain'),
+        ],
+
+        'plain': [
+            (r'([^#\n]|#[^{\n]|(\\\\)*\\#\{)+', Text),
+            (r'(#\{)(' + _dot + '*?)(\})',
+             bygroups(String.Interpol, using(RubyLexer), String.Interpol)),
+            (r'\n', Text, 'root'),
+        ],
+
+#        'html-attributes': [
+#            (r'\s+', Text),
+#            (r'[a-z0-9_:-]+[ \t]*=', Name.Attribute, 'html-attribute-value'),
+#            (r'[a-z0-9_:-]+', Name.Attribute),
+#            (r'\)', Text, '#pop'),
+#        ],
+#
+#        'html-attribute-value': [
+#            (r'[ \t]+', Text),
+#            (r'[a-z0-9_]+', Name.Variable, '#pop'),
+#            (r'@[a-z0-9_]+', Name.Variable.Instance, '#pop'),
+#            (r'\$[a-z0-9_]+', Name.Variable.Global, '#pop'),
+#            (r"'(\\\\|\\'|[^'\n])*'", String, '#pop'),
+#            (r'"(\\\\|\\"|[^"\n])*"', String, '#pop'),
+#        ],
+#
+        'html-comment-block': [
+            (_dot + '+', Comment),
+            (r'\n', Text, 'root'),
+        ],
+
+        'slim-comment-block': [
+            (_dot + '+', Comment.Preproc),
+            (r'\n', Text, 'root'),
+        ],
+
+#        'filter-block': [
+#            (r'([^#\n]|#[^{\n]|(\\\\)*\\#\{)+', Name.Decorator),
+#            (r'(#\{)(' + _dot + '*?)(\})',
+#             bygroups(String.Interpol, using(RubyLexer), String.Interpol)),
+#            (r'\n', Text, 'root'),
+#        ],
+    }
+
 
 class SassLexer(ExtendedRegexLexer):
     """
