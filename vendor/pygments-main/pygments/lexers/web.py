@@ -1694,7 +1694,7 @@ class SlimLexer(ExtendedRegexLexer):
 
         'content': [
             include('css'),
-            (html_tag + r'(?=\s|\n|\.|\#|:)', Name.Tag, 'tag'),
+            (html_tag + r'(?=\s|\n|\.|\#|:|=)', Name.Tag, 'tag'),
             (r'doctype', Name.Namespace, '#pop'),
             (r'(/)(\[' + _dot + '*?\])(' + _dot + r'*\n)',
              bygroups(Comment, Comment.Special, Comment),
