@@ -1671,8 +1671,6 @@ class SlimLexer(ExtendedRegexLexer):
     # allows line wrapping as well.
     _comma_dot = r'(?:,\s*\n|' + _dot + ')'
 
-    html_tag = r'(a|abbr|acronym|address|applet|area|article|aside|audio|b|base|basefont|bdi|bdo|big|blockquote|body|br|button|canvas|caption|center|cite|code|col|colgroup|command|datalist|dd|del|details|dfn|dir|div|dl|dt|em|embed|fieldset|figcaption|figure|font|footer|form|frame|frameset|head|header|hgroup|h1|h2|h3|h4|h5|h6|hr|html|i|iframe|img|input|ins|kbd|keygen|label|legend|li|link|map|mark|menu|meta|meter|nav|noframes|noscript|object|ol|optgroup|option|output|p|param|pre|progress|q|rp|rt|ruby|s|samp|script|section|select|small|source|span|strike|strong|style|sub|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|tt|u|ul|var|video|wbr)'
-
     tokens = {
         'root': [
             (r'[ \t]*\n', Text),
@@ -1694,8 +1692,8 @@ class SlimLexer(ExtendedRegexLexer):
 
         'content': [
             include('css'),
-            (html_tag + r'(?=\s|\n|\.|\#|:|=)', Name.Tag, 'tag'),
             (r'doctype', Name.Namespace, '#pop'),
+            (r'[a-z0-9]+(?=[\s\n\.\#\(\{\[:=].+)', Name.Tag, 'tag'),
             (r'(/)(\[' + _dot + '*?\])(' + _dot + r'*\n)',
              bygroups(Comment, Comment.Special, Comment),
              '#pop'),
@@ -1706,16 +1704,16 @@ class SlimLexer(ExtendedRegexLexer):
             (r'(-)(' + _comma_dot + r'*\n)',
              bygroups(Punctuation, using(RubyLexer)),
              '#pop'),
-#            (r':' + _dot + r'*\n', _starts_block(Name.Decorator, 'filter-block'),
-#             '#pop'),
+            (r'\w+:' + _dot + r'*\n', _starts_block(Name.Decorator, 'filter-block'),
+             '#pop'),
             include('eval-or-plain'),
         ],
 
         'tag': [
             include('css'),
-            (r'\{(,\n|' + _dot + ')*?\}', using(RubyLexer)),
-            (r'\[' + _dot + '*?\]', using(RubyLexer)),
-#            (r'\(', Text, 'html-attributes'),
+#            (r'\{(,\n|' + _dot + ')*?\}', using(RubyLexer)),
+#            (r'\[' + _dot + '*?\]', using(RubyLexer)),
+            (r'\(', Text, 'html-attributes'),
             (r'/[ \t]*\n', Punctuation, '#pop:2'),
             (r'[<>]{1,2}(?=[ \t=])', Punctuation),
             include('eval-or-plain'),
@@ -1728,22 +1726,22 @@ class SlimLexer(ExtendedRegexLexer):
             (r'\n', Text, 'root'),
         ],
 
-#        'html-attributes': [
-#            (r'\s+', Text),
-#            (r'[a-z0-9_:-]+[ \t]*=', Name.Attribute, 'html-attribute-value'),
-#            (r'[a-z0-9_:-]+', Name.Attribute),
-#            (r'\)', Text, '#pop'),
-#        ],
-#
-#        'html-attribute-value': [
-#            (r'[ \t]+', Text),
-#            (r'[a-z0-9_]+', Name.Variable, '#pop'),
-#            (r'@[a-z0-9_]+', Name.Variable.Instance, '#pop'),
-#            (r'\$[a-z0-9_]+', Name.Variable.Global, '#pop'),
-#            (r"'(\\\\|\\'|[^'\n])*'", String, '#pop'),
-#            (r'"(\\\\|\\"|[^"\n])*"', String, '#pop'),
-#        ],
-#
+        'html-attributes': [
+            (r'\s+', Text),
+            (r'([a-z0-9_:-]+[ \t]*)(=)', bygroups(Name.Attribute, Text), 'html-attribute-value'),
+            (r'[a-z0-9_:-]+', Name.Attribute),
+            (r'\)', Text, '#pop'),
+        ],
+
+        'html-attribute-value': [
+            (r'[ \t]+', Text),
+            (r'[a-z0-9_]+', Name.Variable, '#pop'),
+            (r'@[a-z0-9_]+', Name.Variable.Instance, '#pop'),
+            (r'\$[a-z0-9_]+', Name.Variable.Global, '#pop'),
+            (r"'(\\\\|\\'|[^'\n])*'", String, '#pop'),
+            (r'"(\\\\|\\"|[^"\n])*"', String, '#pop'),
+        ],
+
         'html-comment-block': [
             (_dot + '+', Comment),
             (r'\n', Text, 'root'),
@@ -1754,12 +1752,12 @@ class SlimLexer(ExtendedRegexLexer):
             (r'\n', Text, 'root'),
         ],
 
-#        'filter-block': [
-#            (r'([^#\n]|#[^{\n]|(\\\\)*\\#\{)+', Name.Decorator),
-#            (r'(#\{)(' + _dot + '*?)(\})',
-#             bygroups(String.Interpol, using(RubyLexer), String.Interpol)),
-#            (r'\n', Text, 'root'),
-#        ],
+        'filter-block': [
+            (r'([^#\n]|#[^{\n]|(\\\\)*\\#\{)+', Name.Decorator),
+            (r'(#\{)(' + _dot + '*?)(\})',
+             bygroups(String.Interpol, using(RubyLexer), String.Interpol)),
+            (r'\n', Text, 'root'),
+        ],
     }
 
 
